@@ -53,15 +53,20 @@ node ./index.mjs mistralai/Mistral-7B-Instruct-v0.3 --session ../sessions/hero.j
 node ./index.mjs mistralai/Mistral-7B-Instruct-v0.3 --session ../sessions/arc.jsonl instruct "Write the midpoint confrontation. 1800–2200 words." --chunks 1400 --target 2200
 ```
 
-### File path compatibility note
-
-> Previous versions used an `@` prefix for file paths (e.g., `@../prompts/foo.txt`). This is no longer required; simply use the file path directly. For compatibility, the CLI still accepts the `@` prefix:
->
 > ```bash
 > context "@../prompts/premise.txt"
 > ```
 
-> PowerShell note: always quote file paths, e.g. "../prompts/foo.txt".
+### File path compatibility note
+
+> **Important:** To use a file as input for `context` or `instruct`, you **must** prefix the file path with `@` (e.g., `@../prompts/foo.txt`). If you do not use the `@` prefix, the argument will be treated as a literal string, not a file path.
+>
+> ```bash
+> context "@../prompts/premise.txt"
+> instruct "@../prompts/instruct.txt"
+> ```
+
+> PowerShell note: always quote file paths, e.g. "@../prompts/foo.txt".
 
 ## Usage
 
