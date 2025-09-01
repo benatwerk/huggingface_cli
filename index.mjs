@@ -173,7 +173,7 @@ if (messages.length === 0) {
 /* ---------------------------- Inference plumbing ----------------------------- */
 const providers = providerOverride
     ? [providerOverride]
-    : ["together", "fireworks-ai"];
+    : ["huggingface"]; // Use "huggingface" as default instead of empty array
 const hf = new InferenceClient(process.env.HF_TOKEN_CLI);
 
 // auto-continue across provider caps
@@ -195,7 +195,7 @@ async function autoContinueChat({
             JSON.stringify(
                 {
                     model,
-                    provider,
+                    provider: provider || "huggingface",
                     max_tokens: chunkMax,
                     temperature: 0.85,
                     top_p: 0.92,
@@ -209,15 +209,22 @@ async function autoContinueChat({
     }
 
     for (let round = 0; round < maxRounds; round++) {
-        const res = await hf.chatCompletion({
+        const requestBody = {
             model,
-            provider,
+            // Only pass provider if it's not "huggingface"
+            ...(provider && provider !== "huggingface" && { provider }),
             messages: msgs,
             max_tokens: chunkMax,
             temperature: 0.85,
             top_p: 0.92,
-            extra_body: { max_output_tokens: chunkMax },
-        });
+        };
+
+        // Only add extra_body for providers that support it
+        if (provider && provider !== "huggingface") {
+            requestBody.extra_body = { max_output_tokens: chunkMax };
+        }
+
+        const res = await hf.chatCompletion(requestBody);
 
         const piece = res?.choices?.[0]?.message?.content ?? "";
         const finish = res?.choices?.[0]?.finish_reason ?? "";
@@ -274,11 +281,17 @@ if (debug) {
 }
 
 /* --------------------------------- run call ---------------------------------- */
+console.error(`[debug] About to try providers: ${JSON.stringify(providers)}`);
+console.error(`[debug] Model: ${model}`);
+console.error(`[debug] HF Token: ${process.env.HF_TOKEN_CLI ? 'SET' : 'NOT SET'}`);
+
 let lastErr;
 for (const provider of providers) {
+    console.error(`[debug] Trying provider: ${provider}`);
     try {
         const baseMessages = messages;
 
+        console.error(`[debug] Calling autoContinueChat with provider: ${provider}`);
         const { text, messages: newMsgs } = await autoContinueChat({
             model,
             provider,
@@ -314,10 +327,17 @@ for (const provider of providers) {
         console.error(
             `Error with provider ${provider} (model=${model}): ${e.message}`
         );
+        console.error(`[debug] Full error:`, e);
+        console.error(`[debug] Error stack:`, e.stack);
     }
 }
 
-console.error(
-    `All providers failed. Giving up. Last error: ${lastErr.message}`
-);
+// Fix the error handling
+if (lastErr) {
+    console.error(
+        `All providers failed. Giving up. Last error: ${lastErr.message}`
+    );
+} else {
+    console.error("No providers available to try.");
+}
 process.exit(1);
