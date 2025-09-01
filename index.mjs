@@ -1,21 +1,15 @@
 // ./cli/index.mjs
 import fs from "node:fs";
 import path from "node:path";
-import "dotenv/config";
+import { config } from "dotenv";
 import { InferenceClient } from "@huggingface/inference";
 
-/* ---------------- env: load ../.env.local (HF_TOKEN_CLI=hf_xxx) --------------- */
-const envPath = path.resolve(process.cwd(), "./.env.local");
-if (fs.existsSync(envPath)) {
-    for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
-        const t = line.trim();
-        if (!t || t.startsWith("#")) continue;
-        const [k, ...rest] = t.split("=");
-        if (k === "HF_TOKEN_CLI") process.env.HF_TOKEN_CLI = rest.join("=");
-    }
-}
+// Load .env.local specifically
+config({ path: path.resolve(process.cwd(), ".env.local") });
+
+/* ---------------- env: load .env.local (HF_TOKEN_CLI=hf_xxx) --------------- */
 if (!process.env.HF_TOKEN_CLI) {
-    console.error("Missing HF_TOKEN_CLI in ../.env.local");
+    console.error("Missing HF_TOKEN_CLI in .env.local");
     process.exit(1);
 }
 
